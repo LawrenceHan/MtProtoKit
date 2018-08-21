@@ -36,6 +36,10 @@
         _cdn = [aDecoder decodeBoolForKey:@"cdn"];
         _preferForProxy = [aDecoder decodeBoolForKey:@"preferForProxy"];
         _secret = [aDecoder decodeObjectForKey:@"secret"];
+        
+        _fileServer = [aDecoder decodeObjectForKey:@"fileServer"];
+        _imagePath = [aDecoder decodeObjectForKey:@"imagePath"];
+        _emojiPath = [aDecoder decodeObjectForKey:@"emojiPath"];
     }
     return self;
 }
@@ -50,6 +54,10 @@
     [aCoder encodeBool:_cdn forKey:@"cdn"];
     [aCoder encodeBool:_preferForProxy forKey:@"preferForProxy"];
     [aCoder encodeObject:_secret forKey:@"secret"];
+    
+    [aCoder encodeObject:_fileServer forKey:@"fileServer"];
+    [aCoder encodeObject:_imagePath forKey:@"imagePath"];
+    [aCoder encodeObject:_emojiPath forKey:@"emojiPath"];
 }
 
 - (BOOL)isEqual:(id)object
@@ -94,6 +102,15 @@
         return false;
     }
     
+    if (![_host isEqualToString:other.host])
+        return false;
+    if (![_fileServer isEqualToString:other.fileServer])
+        return false;
+    if (![_imagePath isEqualToString:other.imagePath])
+        return false;
+    if (![_emojiPath isEqualToString:other.emojiPath])
+        return false;
+    
     return true;
 }
 
@@ -110,7 +127,7 @@
 
 - (NSString *)description
 {
-    return [[NSString alloc] initWithFormat:@"%@:%d (media: %@, cdn: %@, static: %@, secret: %@)", _ip == nil ? _host : _ip, (int)_port, _preferForMedia ? @"yes" : @"no", _cdn ? @"yes" : @"no", _preferForProxy ? @"yes" : @"no", _secret];
+    return [[NSString alloc] initWithFormat:@"%@:%d (host: %@, file: %@, image: %@, emoji: %@, media: %@, cdn: %@, static: %@, secret: %@)", _ip, (int)_port, _host, _fileServer, _imagePath, _emojiPath, _preferForMedia ? @"yes" : @"no", _cdn ? @"yes" : @"no", _preferForProxy ? @"yes" : @"no", _secret];
 }
 
 @end
