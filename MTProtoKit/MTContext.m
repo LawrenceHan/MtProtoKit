@@ -980,7 +980,7 @@
             }
             MTDatacenterAddressSet *addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:addressList];
             MTSignal *discoverSignal = [MTDiscoverConnectionSignals discoverSchemeWithContext:self addressList:addressSet.addressList media:media isProxy:isProxy];
-            MTSignal *conditionSignal = [MTSignal single:@(true)];
+            MTSignal *conditionSignal = [MTSignal single:@(false)];
             for (id<MTContextChangeListener> listener in _changeListeners) {
                 if ([listener respondsToSelector:@selector(isContextNetworkAccessAllowed:)]) {
                     MTSignal *signal = [listener isContextNetworkAccessAllowed:self];
