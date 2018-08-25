@@ -23,12 +23,15 @@
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTSignal.h>
 #   import <MTProtoKitDynamic/MTDNS.h>
+#   import <MTProtoKitDynamic/MTProto.h>
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTSignal.h>
 #   import <MTProtoKitMac/MTDNS.h>
+#   import <MTProtoKitMac/MTProto.h>
 #else
 #   import <MTProtoKit/MTSignal.h>
 #   import <MTProtoKit/MTDNS.h>
+#   import <MTProtoKit/MTProto.h>
 #endif
 
 @interface MTTcpConnectionData : NSObject
@@ -120,7 +123,6 @@ typedef enum {
     MTTcpSocksReceiveAuthResponse,
     // New
     MTTcpReadTagNonBody,
-    MTTcpReadTagPong
 } MTTcpReadTags;
 
 static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
@@ -369,11 +371,12 @@ struct ctr_state {
                     if (![strongSelf->_socket connectToHost:connectionData.ip onPort:connectionData.port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
                         [strongSelf closeAndNotify];
                     } else if (strongSelf->_socksIp == nil) {
-                        if (_useIntermediateFormat) {
-                            [strongSelf->_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
-                        } else {
-                            [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
-                        }
+//                        if (_useIntermediateFormat) {
+//                            [strongSelf->_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+//                        } else {
+//                            [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+//                        }
+                        [strongSelf->_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
                     } else {
                         struct socks5_ident_req req;
                         req.Version = 5;
@@ -1003,7 +1006,7 @@ struct ctr_state {
         nextToken++;
         
         uint16_t headerLength = 0;
-        [data getBytes:&data length:2];
+        [data getBytes:&headerLength length:2];
         
         id<MTTcpConnectionDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(tcpConnectionDecodePacketProgressToken:data:token:completion:)])
@@ -1057,12 +1060,12 @@ struct ctr_state {
             }
             if (operation == 501) {
                 bodyData = TTAes256Decrypt([data subdataWithRange:NSMakeRange(headOffset, data.length-headOffset)], TTGetTcpKey());
-                TCPAuthResponse *auth = [TCPAuthResponse parseFromData:bodyData error:nil];
-                _innerAesKey = auth.aesKey;
-                [CommonTool setTCPAESValue:_innerAesKey];
-                TTLog(@"[TTTcpConnection#%x received aes: %@]", (int)self, auth.aesKey);
+                TTProtoDecoder decoder = [MTProto protoDecoderForName:@"auth"];
+                NSAssert(decoder, @"decoder should not be nil");
+                _innerTcpKey = decoder(bodyData);
+                MTLog(@"[MTTcpConnection#%x received tcp key: %@]", (int)self, _innerTcpKey);
             } else {
-                bodyData = [AESUtil AES256Decrypt:[data subdataWithRange:NSMakeRange(headOffset, data.length-headOffset)] key:_innerAesKey];
+                bodyData = TTAes256Decrypt([data subdataWithRange:NSMakeRange(headOffset, data.length-headOffset)], _innerTcpKey);
             }
             
             NSMutableData *combinedData = [[NSMutableData alloc] initWithCapacity:headData.length + bodyData.length];
@@ -1072,36 +1075,36 @@ struct ctr_state {
             _packetHead = nil;
         }
         
-        if (packetData.length % 4 != 0) {
-            int32_t realLength = ((int32_t)packetData.length) & (~3);
-            packetData = [packetData subdataWithRange:NSMakeRange(0, (NSUInteger)realLength)];
-        }
+//        if (packetData.length % 4 != 0) {
+//            int32_t realLength = ((int32_t)packetData.length) & (~3);
+//            packetData = [packetData subdataWithRange:NSMakeRange(0, (NSUInteger)realLength)];
+//        }
         
         bool ignorePacket = false;
-        if (packetData.length >= 4) {
-            int32_t header = 0;
-            [packetData getBytes:&header length:4];
-            if (header == 0xffffffff) {
-                if (packetData.length >= 8) {
-                    int32_t ackId = 0;
-                    [packetData getBytes:&ackId range:NSMakeRange(4, 4)];
-                    ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
-                    ackId = (int32_t)OSSwapInt32(ackId);
-                    
-                    id<MTTcpConnectionDelegate> delegate = _delegate;
-                    if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)]) {
-                        [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
-                    }
-                    
-                    ignorePacket = true;
-                }
-            } else if (header == 0 && packetData.length < 16) {
-                if (MTLogEnabled()) {
-                    MTLog(@"[MTTcpConnection#%x received nop packet]", (int)self);
-                }
-                ignorePacket = true;
-            }
-        }
+//        if (packetData.length >= 4) {
+//            int32_t header = 0;
+//            [packetData getBytes:&header length:4];
+//            if (header == 0xffffffff) {
+//                if (packetData.length >= 8) {
+//                    int32_t ackId = 0;
+//                    [packetData getBytes:&ackId range:NSMakeRange(4, 4)];
+//                    ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
+//                    ackId = (int32_t)OSSwapInt32(ackId);
+//
+//                    id<MTTcpConnectionDelegate> delegate = _delegate;
+//                    if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)]) {
+//                        [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
+//                    }
+//
+//                    ignorePacket = true;
+//                }
+//            } else if (header == 0 && packetData.length < 16) {
+//                if (MTLogEnabled()) {
+//                    MTLog(@"[MTTcpConnection#%x received nop packet]", (int)self);
+//                }
+//                ignorePacket = true;
+//            }
+//        }
         
         if (!ignorePacket) {
             if (_connectionReceivedData)
@@ -1111,11 +1114,12 @@ struct ctr_state {
                 [delegate tcpConnectionReceivedData:self data:packetData];
         }
         
-        if (_useIntermediateFormat) {
-            [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
-        } else {
-            [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
-        }
+//        if (_useIntermediateFormat) {
+//            [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
+//        } else {
+//            [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
+//        }
+        [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
     }
     else if (tag == MTTcpReadTagQuickAck)
     {

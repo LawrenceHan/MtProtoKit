@@ -962,7 +962,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 messageSalt = [_authInfo authSaltForMessageId:[transactionSessionInfo actualClientMessagId]];
                 if (messageSalt == 0)
-                    saltSetEmpty = true;
+                    saltSetEmpty = false;
             }
             
             bool transactionNeedsQuickAck = false;
@@ -2850,6 +2850,29 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         _bindingTempAuthKeyContext = nil;
         _mtState |= MTProtoStateBindingTempAuthKey;
     }];
+}
+
+// New
++ (NSMutableDictionary *)protoDecoder {
+    static NSMutableDictionary *dictionary = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dictionary = [[NSMutableDictionary alloc] init];
+    });
+    return dictionary;
+}
+
++ (void)registerProtoDecoder:(TTProtoDecoder)decoder withName:(NSString *)name {
+    [[MTProto protoDecoder] setObject:[decoder copy] forKey:name];
+}
+
++ (TTProtoDecoder)protoDecoderForName:(NSString *)name {
+    TTProtoDecoder processor = [[MTProto protoDecoder] objectForKey:name];
+    if (processor != nil) {
+        return processor;
+    }
+    
+    return nil;
 }
 
 @end

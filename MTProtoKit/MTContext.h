@@ -109,4 +109,7 @@
 
 - (void)beginExplicitBackupAddressDiscovery;
 
+// New
+@property (nonatomic, copy) NSString *(^decodeAuthBlock)(NSData *);
+
 @end

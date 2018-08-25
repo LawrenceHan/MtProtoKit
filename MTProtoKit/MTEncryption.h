@@ -38,7 +38,7 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv);
     uint32_t TTGetAesKey();
     void TTSetAesKey(uint32_t key);
     NSString *TTGetApiKey();
-    void TTSaveApiKey(NSString *key);
+    void TTSetApiKey(NSString *key);
     NSString *TTGetTcpKey();
     
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);

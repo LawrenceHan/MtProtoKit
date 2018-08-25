@@ -1259,18 +1259,30 @@ NSData *TTAes256Decrypt(NSData *data, NSString *key) {
 }
 
 uint32_t TTGetAesKey() {
+    NSNumber *aesKey = [[NSUserDefaults standardUserDefaults] valueForKey:@"tt_aes_key"];
+    if (aesKey) {
+        TTAesKey = aesKey.intValue;
+    }
     return TTAesKey;
 }
 
 void TTSetAesKey(uint32_t key) {
+    [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInt:key] forKey:@"tt_aes_key"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
     TTAesKey = key;
 }
 
 NSString *TTGetApiKey() {
+    NSString *apiKey = [[NSUserDefaults standardUserDefaults] objectForKey:@"tt_api_key"];
+    if (apiKey.length) {
+        TTApiKey = apiKey;
+    }
     return TTApiKey;
 }
 
-void TTSaveApiKey(NSString *key) {
+void TTSetApiKey(NSString *key) {
+    [[NSUserDefaults standardUserDefaults] setObject:key forKey:@"tt_api_key"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
     TTApiKey = key;
 }
 

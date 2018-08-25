@@ -67,4 +67,9 @@
 
 - (void)_messageResendRequestFailed:(int64_t)messageId;
 
+// New
+typedef NSString *(^TTProtoDecoder)(NSData *);
++ (void)registerProtoDecoder:(TTProtoDecoder)decoder withName:(NSString *)name;
++ (TTProtoDecoder)protoDecoderForName:(NSString *)name;
+
 @end
