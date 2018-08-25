@@ -88,3 +88,36 @@ static inline int roundUp(int numToRound, int multiple)
 }
 
 @end
+
+// New
+@implementation MTBuffer (TT)
+
+- (void)appendData:(NSData *)data operation:(int32_t)operation {
+    NSMutableData *packetData = [[NSMutableData alloc] initWithCapacity:data.length + 16];
+    
+    UInt16 headerLength = (UInt16)16;
+    UInt32 packetLength = (UInt32)(headerLength + data.length);
+    
+    NSData *packetLengthData = [NSData dataWithBytes:&packetLength length:sizeof(packetLength)];
+    [packetData appendData:packetLengthData];
+    
+    NSData *headerLengthData = [NSData dataWithBytes:&headerLength length:sizeof(headerLength)];
+    [packetData appendData:headerLengthData];
+    
+    UInt16 protocalVersion = 2;
+    NSData *protocalVersionData = [NSData dataWithBytes:&protocalVersion length:sizeof(protocalVersion)];
+    [packetData appendData:protocalVersionData];
+    
+    NSData *operationData = [NSData dataWithBytes:&operation length:sizeof(operation)];
+    [packetData appendData:operationData];
+    
+    UInt32 sequenceId = 1;
+    NSData *sequenceIdData = [NSData dataWithBytes:&sequenceId length:sizeof(sequenceId)];
+    [packetData appendData:sequenceIdData];
+    
+    [packetData appendData:data];
+    
+    [_data appendData:packetData];
+}
+
+@end

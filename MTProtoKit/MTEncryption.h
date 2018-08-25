@@ -28,6 +28,19 @@ void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableD
 void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv);
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv);
+    
+    // New
+    NSData *TTAes128Encrypt(NSData *data, NSString *key);
+    NSData *TTAes128Decrypt(NSData *data, NSString *key);
+    NSData *TTAes256Encrypt(NSData *data, NSString *key);
+    NSData *TTAes256Decrypt(NSData *data, NSString *key);
+    
+    uint32_t TTGetAesKey();
+    void TTSetAesKey(uint32_t key);
+    NSString *TTGetApiKey();
+    void TTSaveApiKey(NSString *key);
+    NSString *TTGetTcpKey();
+    
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);
 NSData *MTExp(NSData *base, NSData *exp, NSData *modulus);
 NSData *MTModSub(NSData *a, NSData *b, NSData *modulus);

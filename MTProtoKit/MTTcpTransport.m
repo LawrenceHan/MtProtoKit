@@ -543,7 +543,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (transportContext.connectionBehaviour != behaviour)
             return;
         
-        if (!transportContext.stopped)
+        if (!transportContext.stopped && [_context authInfoForDatacenterWithId:_datacenterId] != nil)
             [self startIfNeeded];
     }];
 }
@@ -594,11 +594,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             int64_t randomId = 0;
             arc4random_buf(&randomId, 8);
             
-            MTBuffer *pingBuffer = [[MTBuffer alloc] init];
-            [pingBuffer appendInt32:(int32_t)0x7abe77ec];
-            [pingBuffer appendInt64:randomId];
+            MTBuffer *authBuffer = [[MTBuffer alloc] init];
+//            [pingBuffer appendInt32:(int32_t)0x7abe77ec];
+//            [pingBuffer appendInt64:randomId];
+            MTDatacenterAuthInfo *auth = [_context authInfoForDatacenterWithId:_datacenterId];
+            [authBuffer appendData:auth.authKey operation:501];
             
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping"];
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:authBuffer.data metadata:@"auth"];
             outgoingMessage.requiresConfirmation = false;
             
             __weak MTTcpTransport *weakSelf = self;

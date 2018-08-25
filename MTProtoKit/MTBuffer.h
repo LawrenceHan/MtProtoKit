@@ -16,3 +16,10 @@
 - (void)appendTLString:(NSString *)string;
 
 @end
+
+// New
+@interface MTBuffer (TT)
+
+- (void)appendData:(NSData *)data operation:(int32_t)operation;
+
+@end

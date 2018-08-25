@@ -1092,3 +1092,189 @@ NSData * _Nullable MTPBKDF2(NSData * _Nonnull data, NSData * _Nonnull salt, int 
     }
     return result;
 }
+
+// New
+static NSString *TTApiKey = @"123456789abcdefg";
+static NSString *TTTcpKey = @"8qzXbJfEkaBBpbMyt2RPMptneguNHJCx";
+static UInt32 TTAesKey = 123456;
+
+#define tIv @"123456789abcdefg"
+#define tTcpIv @"ZdX6aU7EYqIvy5Mu"
+
+NSData *TTAes128Encrypt(NSData *data, NSString *key) {
+    char keyPtr[kCCKeySizeAES128+1];
+    memset(keyPtr, 0, sizeof(keyPtr));
+    NSString *strKey = key;
+    if (strKey.length == 0) {
+        strKey = TTApiKey;
+    }
+    [strKey getCString:keyPtr maxLength:sizeof(keyPtr) encoding:NSUTF8StringEncoding];
+    
+    char ivPtr[kCCBlockSizeAES128+1];
+    memset(ivPtr, 0, sizeof(ivPtr));
+    [tIv getCString:ivPtr maxLength:sizeof(ivPtr) encoding:NSUTF8StringEncoding];
+    
+    NSUInteger dataLength = [data length];
+    
+    size_t bufferSize = dataLength + kCCBlockSizeAES128;
+    void *buffer = malloc(bufferSize);
+    memset(buffer, 0, bufferSize);
+    
+    size_t numBytesCrypted = 0;
+    
+    CCCryptorStatus cryptStatus = CCCrypt(kCCEncrypt,
+                                          kCCAlgorithmAES128,
+                                          kCCOptionPKCS7Padding,
+                                          keyPtr,
+                                          kCCKeySizeAES128,
+                                          ivPtr,
+                                          [data bytes],
+                                          [data length],
+                                          buffer,
+                                          bufferSize,
+                                          &numBytesCrypted);
+    
+    if (cryptStatus == kCCSuccess) {
+        NSData *resultData = [NSData dataWithBytesNoCopy:buffer length:numBytesCrypted];
+        return resultData;
+    }
+    
+    free(buffer);
+    return nil;
+}
+
+NSData *TTAes128Decrypt(NSData *data, NSString *key) {
+    char keyPtr[kCCKeySizeAES128 + 1];
+    memset(keyPtr, 0, sizeof(keyPtr));
+    NSString *strKey = key;
+    if (strKey.length == 0) {
+        strKey = TTApiKey;
+    }
+    [strKey getCString:keyPtr maxLength:sizeof(keyPtr) encoding:NSUTF8StringEncoding];
+    
+    char ivPtr[kCCBlockSizeAES128 + 1];
+    memset(ivPtr, 0, sizeof(ivPtr));
+    [tIv getCString:ivPtr maxLength:sizeof(ivPtr) encoding:NSUTF8StringEncoding];
+    
+    NSUInteger dataLength = [data length];
+    size_t bufferSize = dataLength + kCCBlockSizeAES128;
+    void *buffer = malloc(bufferSize);
+    
+    size_t numBytesCrypted = 0;
+    CCCryptorStatus cryptStatus = CCCrypt(kCCDecrypt,
+                                          kCCAlgorithmAES128,
+                                          kCCOptionPKCS7Padding,
+                                          keyPtr,
+                                          kCCKeySizeAES128,
+                                          ivPtr,
+                                          [data bytes],
+                                          dataLength,
+                                          buffer,
+                                          bufferSize,
+                                          &numBytesCrypted);
+    if (cryptStatus == kCCSuccess) {
+        NSData *resultData = [NSData dataWithBytesNoCopy:buffer length:numBytesCrypted];
+        return resultData;
+    }
+    free(buffer);
+    return nil;
+}
+
+NSData *TTAes256Encrypt(NSData *data, NSString *key) {
+    char keyPtr[kCCKeySizeAES256+1];
+    memset(keyPtr, 0, sizeof(keyPtr));
+    NSString *strKey = key;
+    if (strKey.length == 0) {
+        strKey = TTTcpKey;
+    }
+    [strKey getCString:keyPtr maxLength:sizeof(keyPtr) encoding:NSUTF8StringEncoding];
+    
+    char ivPtr[kCCBlockSizeAES128+1];
+    memset(ivPtr, 0, sizeof(ivPtr));
+    [tTcpIv getCString:ivPtr maxLength:sizeof(ivPtr) encoding:NSUTF8StringEncoding];
+    
+    NSUInteger dataLength = [data length];
+    
+    size_t bufferSize = dataLength + kCCBlockSizeAES128;
+    void *buffer = malloc(bufferSize);
+    memset(buffer, 0, bufferSize);
+    
+    size_t numBytesCrypted = 0;
+    
+    CCCryptorStatus cryptStatus = CCCrypt(kCCEncrypt,
+                                          kCCAlgorithmAES128,
+                                          kCCOptionPKCS7Padding,
+                                          keyPtr,
+                                          kCCKeySizeAES256,
+                                          ivPtr,
+                                          [data bytes],
+                                          [data length],
+                                          buffer,
+                                          bufferSize,
+                                          &numBytesCrypted);
+    
+    if (cryptStatus == kCCSuccess) {
+        NSData *resultData = [NSData dataWithBytesNoCopy:buffer length:numBytesCrypted];
+        return resultData;
+    }
+    free(buffer);
+    return nil;
+}
+
+NSData *TTAes256Decrypt(NSData *data, NSString *key) {
+    char keyPtr[kCCKeySizeAES256 + 1];
+    memset(keyPtr, 0, sizeof(keyPtr));
+    NSString *strKey = key;
+    if (strKey.length == 0) {
+        strKey = TTTcpKey;
+    }
+    [strKey getCString:keyPtr maxLength:sizeof(keyPtr) encoding:NSUTF8StringEncoding];
+    
+    char ivPtr[kCCBlockSizeAES128 + 1];
+    memset(ivPtr, 0, sizeof(ivPtr));
+    [tTcpIv getCString:ivPtr maxLength:sizeof(ivPtr) encoding:NSUTF8StringEncoding];
+    
+    NSUInteger dataLength = [data length];
+    size_t bufferSize = dataLength + kCCBlockSizeAES128;
+    void *buffer = malloc(bufferSize);
+    
+    size_t numBytesCrypted = 0;
+    CCCryptorStatus cryptStatus = CCCrypt(kCCDecrypt,
+                                          kCCAlgorithmAES128,
+                                          kCCOptionPKCS7Padding,
+                                          keyPtr,
+                                          kCCKeySizeAES256,
+                                          ivPtr,
+                                          [data bytes],
+                                          dataLength,
+                                          buffer,
+                                          bufferSize,
+                                          &numBytesCrypted);
+    if (cryptStatus == kCCSuccess) {
+        NSData *resultData = [NSData dataWithBytesNoCopy:buffer length:numBytesCrypted];
+        return resultData;
+    }
+    free(buffer);
+    return nil;
+}
+
+uint32_t TTGetAesKey() {
+    return TTAesKey;
+}
+
+void TTSetAesKey(uint32_t key) {
+    TTAesKey = key;
+}
+
+NSString *TTGetApiKey() {
+    return TTApiKey;
+}
+
+void TTSaveApiKey(NSString *key) {
+    TTApiKey = key;
+}
+
+NSString *TTGetTcpKey() {
+    return TTTcpKey;
+}
+
