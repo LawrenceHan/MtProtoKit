@@ -54,6 +54,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 @property (nonatomic, strong) MTTimer *sleepWatchdogTimer;
 @property (nonatomic) CFAbsoluteTime sleepWatchdogTimerLastTime;
 
+// New
+@property (nonatomic, strong) MTTimer *heartBeatTimer;
+
 @end
 
 @implementation MTTcpTransportContext
@@ -134,6 +137,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         
         [transportContext.sleepWatchdogTimer invalidate];
         transportContext.sleepWatchdogTimer = nil;
+        
+        // New
+        [transportContext.heartBeatTimer invalidate];
+        transportContext.heartBeatTimer = nil;
     }];
 }
 
@@ -244,6 +251,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         
         [transportContext.actualizationPingResendTimer invalidate];
         transportContext.actualizationPingResendTimer = nil;
+        
+        // New
+        [transportContext.heartBeatTimer invalidate];
+        transportContext.heartBeatTimer = nil;
     }];
 }
 
@@ -429,6 +440,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         transportContext.didSendActualizationPingAfterConnection = false;
         transportContext.currentActualizationPingMessageId = 0;
         
+        // New
+        [self stopHeartBeatTimer];
+        
         [self restartSleepWatchdogTimer];
         
         id<MTTransportDelegate> delegate = self.delegate;
@@ -480,6 +494,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         }
         
         [self stopConnectionWatchdogTimer];
+        
+        // New
+        [self startHeartBeatTimer];
     }];
 }
 
@@ -490,6 +507,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:hasConnectionProblems:isProbablyHttp:)])
             [delegate transportConnectionProblemsStatusChanged:self hasConnectionProblems:true isProbablyHttp:true];
+        
+        // New
+        [self stopHeartBeatTimer];
     }];
 }
 
@@ -766,6 +786,43 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
                 [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:false];
         }
+    }];
+}
+
+// New
+
+- (void)startHeartBeatTimer {
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        MTTcpTransportContext *transportContext = _transportContext;
+        if (!transportContext.heartBeatTimer.isScheduled || transportContext.heartBeatTimer == nil) {
+            [transportContext.heartBeatTimer invalidate];
+            transportContext.heartBeatTimer = nil;
+            
+            __weak MTTcpTransport *weakSelf = self;
+            transportContext.heartBeatTimer = [[MTTimer alloc] initWithTimeout:30.0 repeat:false completion:^{
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                [strongSelf _sendHeartBeat];
+            } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
+        }
+    }];
+}
+
+- (void)stopHeartBeatTimer {
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        MTTcpTransportContext *transportContext = _transportContext;
+        if (transportContext.heartBeatTimer != nil) {
+            [transportContext.heartBeatTimer invalidate];
+            transportContext.heartBeatTimer = nil;
+        }
+    }];
+}
+
+- (void)_sendHeartBeat {
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        MTTcpTransportContext *transportContext = _transportContext;
+        MTBuffer *heartBeat = [[MTBuffer alloc] init];
+        [heartBeat appendData:[NSData data] operation:999];
+        [transportContext.connection sendDatas:@[heartBeat.data] completion:nil requestQuickAck:false expectDataInResponse:false];
     }];
 }
 

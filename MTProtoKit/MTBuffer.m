@@ -117,7 +117,7 @@ static inline int roundUp(int numToRound, int multiple)
     
     [packetData appendData:data];
     
-    [_data appendData:packetData];
+    _data = packetData;
 }
 
 @end

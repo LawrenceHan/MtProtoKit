@@ -30,4 +30,7 @@
 
 - (void)setPayload:(NSData *)payload metadata:(id)metadata responseParser:(id (^)(NSData *))responseParser;
 
+// New
+@property (nonatomic) bool isProto;
+
 @end

@@ -446,7 +446,7 @@ struct ctr_state {
                 for (NSData *data in datas)
                 {
                     NSMutableData *packetData = [[NSMutableData alloc] initWithCapacity:data.length];
-                    NSMutableData *header = [[data subdataWithRange:NSMakeRange(0, 15)] mutableCopy];
+                    NSMutableData *header = [[data subdataWithRange:NSMakeRange(0, 16)] mutableCopy];
                     NSData *body = [data subdataWithRange:NSMakeRange(16, data.length-16)];
                     
 //                    uint8_t padding[16];
@@ -570,7 +570,7 @@ struct ctr_state {
 //                        [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
                         NSData *encryptedData = TTAes256Encrypt(body, TTGetTcpKey());
                         uint32_t packetLength = (uint32_t)(header.length+encryptedData.length);
-                        [header replaceBytesInRange:NSMakeRange(0, 3) withBytes:&packetLength];
+                        [header replaceBytesInRange:NSMakeRange(0, 4) withBytes:&packetLength];
                         [packetData appendData:header];
                         [packetData appendData:encryptedData];
                         completeDataLength = packetData.length;

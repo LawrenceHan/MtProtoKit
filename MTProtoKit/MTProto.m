@@ -1138,7 +1138,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address extendedPadding:extendedPadding];
                                 if (messageData != nil)
                                 {
-                                    [transactionPayloadList addObject:messageData];
+                                    for (MTPreparedMessage *message in currentContainerMessages) {
+                                        [transactionPayloadList addObject:message.data];
+                                    }
+//                                    [transactionPayloadList addObject:messageData];
                                     [messageInternalIdsByPayload addObject:@[preparedMessageInternalIdToMessageInternalId[((MTPreparedMessage *)currentContainerMessages[0]).internalId]]];
                                     [quickAckIdsByPayload addObject:@(quickAckId)];
                                 }
@@ -1149,7 +1152,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 NSData *containerData = [self _dataForEncryptedContainerWithMessages:currentContainerMessages sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:transport.address extendedPadding:extendedPadding];
                                 if (containerData != nil)
                                 {
-                                    [transactionPayloadList addObject:containerData];
+                                    for (MTPreparedMessage *message in currentContainerMessages) {
+                                        [transactionPayloadList addObject:message.data];
+                                    }
+//                                    [transactionPayloadList addObject:containerData];
                                     
                                     NSMutableArray *messageInternalIds = [[NSMutableArray alloc] initWithCapacity:currentContainerMessages.count];
                                     for (MTPreparedMessage *preparedMessage in currentContainerMessages)
