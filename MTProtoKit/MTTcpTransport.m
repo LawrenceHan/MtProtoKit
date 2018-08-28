@@ -360,7 +360,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [transportContext.actualizationPingResendTimer invalidate];
         
         __weak MTTcpTransport *weakSelf = self;
-        transportContext.actualizationPingResendTimer = [[MTTimer alloc] initWithTimeout:3 repeat:false completion:^
+        transportContext.actualizationPingResendTimer = [[MTTimer alloc] initWithTimeout:30 repeat:false completion:^
         {
             __strong MTTcpTransport *strongSelf = weakSelf;
             [strongSelf resendActualizationPing];
@@ -758,7 +758,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         MTTcpTransportContext *transportContext = _transportContext;
         [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
         {
-            if (transportContext.currentActualizationPingMessageId != 0 && ((MTPongMessage *)incomingMessage.body).messageId == transportContext.currentActualizationPingMessageId)
+            if (transportContext.currentActualizationPingMessageId != 0 && ((MTPongMessage *)incomingMessage.body).messageId == 501)//transportContext.currentActualizationPingMessageId)
             {
                 [self stopActualizationPingResendTimer];
                 
@@ -797,6 +797,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (!transportContext.heartBeatTimer.isScheduled || transportContext.heartBeatTimer == nil) {
             [transportContext.heartBeatTimer invalidate];
             transportContext.heartBeatTimer = nil;
+            
+            [self _sendHeartBeat];
             
             __weak MTTcpTransport *weakSelf = self;
             transportContext.heartBeatTimer = [[MTTimer alloc] initWithTimeout:30.0 repeat:false completion:^{

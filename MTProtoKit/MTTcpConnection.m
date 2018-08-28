@@ -694,6 +694,7 @@ struct ctr_state {
     if (_closed)
         return;
     
+    /*
     if (tag == MTTcpSocksLogin) {
         if (rawData.length != sizeof(struct socks5_ident_resp)) {
             if (MTLogEnabled()) {
@@ -839,8 +840,8 @@ struct ctr_state {
         return;
     }
     
-//    NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
-//    [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
+    NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
+    [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
     
     NSData *data = rawData;
     
@@ -911,13 +912,16 @@ struct ctr_state {
             else
                 [_socket readDataToLength:packetBodyLength withTimeout:-1 tag:MTTcpReadTagPacketBody];
         }
-    } else if (tag == MTTcpReadTagPacketFullLength) {
+    } else
+     */
+    
+    if (tag == MTTcpReadTagPacketFullLength) {
 #ifdef DEBUG
-        NSAssert(data.length == 4, @"data length should be equal to 4");
+        NSAssert(rawData.length == 4, @"data length should be equal to 4");
 #endif
         
         int32_t length = 0;
-        [data getBytes:&length length:4];
+        [rawData getBytes:&length length:4];
         
 //        if ((length & 0x80000000) == 0x80000000) {
 //            int32_t ackId = length;
@@ -971,11 +975,11 @@ struct ctr_state {
         NSUInteger offset = 0;
         
         uint16_t headerLength = 0;
-        [data getBytes:&headerLength range:NSMakeRange(offset, 2)];
+        [rawData getBytes:&headerLength range:NSMakeRange(offset, 2)];
         offset += 4;
         
         uint32_t operation = 0;
-        [data getBytes:&operation range:NSMakeRange(offset, 4)];
+        [rawData getBytes:&operation range:NSMakeRange(offset, 4)];
         offset += 4;
         
         if (!(operation <= 0 || operation == 502 || operation == 503 || operation == 508 || operation == 998 || operation == 999)) {
@@ -984,7 +988,7 @@ struct ctr_state {
         } else {
             id<MTTcpConnectionDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)]) {
-                [delegate tcpConnectionReceivedData:self data:data];
+                [delegate tcpConnectionReceivedData:self data:rawData];
             }
             
             if (operation == 999) {
@@ -997,30 +1001,30 @@ struct ctr_state {
     else if (tag == MTTcpReadTagPacketHead)
     {
 #ifdef DEBUG
-        NSAssert(data.length == 2, @"data length should be equal to 2");
+        NSAssert(rawData.length == 2, @"data length should be equal to 2");
 #endif
-        _packetHead = data;
+        _packetHead = rawData;
         
         static int64_t nextToken = 0;
         _packetHeadDecodeToken = nextToken;
         nextToken++;
         
         uint16_t headerLength = 0;
-        [data getBytes:&headerLength length:2];
+        [rawData getBytes:&headerLength length:2];
         
-        id<MTTcpConnectionDelegate> delegate = _delegate;
-        if ([delegate respondsToSelector:@selector(tcpConnectionDecodePacketProgressToken:data:token:completion:)])
-        {
-            __weak MTTcpConnection *weakSelf = self;
-            [delegate tcpConnectionDecodePacketProgressToken:self data:data token:_packetHeadDecodeToken completion:^(int64_t token, id packetProgressToken)
-            {
-                [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
-                    __strong MTTcpConnection *strongSelf = weakSelf;
-                    if (strongSelf != nil && token == strongSelf.packetHeadDecodeToken)
-                        strongSelf.packetProgressToken = packetProgressToken;
-                }];
-            }];
-        }
+//        id<MTTcpConnectionDelegate> delegate = _delegate;
+//        if ([delegate respondsToSelector:@selector(tcpConnectionDecodePacketProgressToken:data:token:completion:)])
+//        {
+//            __weak MTTcpConnection *weakSelf = self;
+//            [delegate tcpConnectionDecodePacketProgressToken:self data:data token:_packetHeadDecodeToken completion:^(int64_t token, id packetProgressToken)
+//            {
+//                [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+//                    __strong MTTcpConnection *strongSelf = weakSelf;
+//                    if (strongSelf != nil && token == strongSelf.packetHeadDecodeToken)
+//                        strongSelf.packetProgressToken = packetProgressToken;
+//                }];
+//            }];
+//        }
         
         [_socket readDataToLength:_packetRestLength-2 withTimeout:-1 tag:MTTcpReadTagPacketBody];
     }
@@ -1046,26 +1050,30 @@ struct ctr_state {
             [_packetHead getBytes:&headerLength length:2];
             
             uint32_t operation = 0;
-            [data getBytes:&operation range:NSMakeRange(2, 4)];
+            [rawData getBytes:&operation range:NSMakeRange(2, 4)];
             
             NSUInteger headOffset = headerLength-6;
             
             NSMutableData *headData = [[NSMutableData alloc] initWithCapacity:headerLength-4];
             [headData appendData:_packetHead];
-            [headData appendData:[data subdataWithRange:NSMakeRange(0, headOffset)]];
+            [headData appendData:[rawData subdataWithRange:NSMakeRange(0, headOffset)]];
             
             NSData *bodyData = nil;
             if (!_innerTcpKey.length) {
                 _innerTcpKey = TTGetTcpKey();
             }
             if (operation == 501) {
-                bodyData = TTAes256Decrypt([data subdataWithRange:NSMakeRange(headOffset, data.length-headOffset)], TTGetTcpKey());
+                bodyData = TTAes256Decrypt([rawData subdataWithRange:NSMakeRange(headOffset, rawData.length-headOffset)], TTGetTcpKey());
                 TTProtoDecoder decoder = [MTProto protoDecoderForName:@"auth"];
                 NSAssert(decoder, @"decoder should not be nil");
                 _innerTcpKey = decoder(bodyData);
+//                if (_innerTcpKey.length == 0) {
+//                    [self stop];
+//                    return;
+//                }
                 MTLog(@"[MTTcpConnection#%x received tcp key: %@]", (int)self, _innerTcpKey);
             } else {
-                bodyData = TTAes256Decrypt([data subdataWithRange:NSMakeRange(headOffset, data.length-headOffset)], _innerTcpKey);
+                bodyData = TTAes256Decrypt([rawData subdataWithRange:NSMakeRange(headOffset, rawData.length-headOffset)], _innerTcpKey);
             }
             
             NSMutableData *combinedData = [[NSMutableData alloc] initWithCapacity:headData.length + bodyData.length];
@@ -1073,6 +1081,8 @@ struct ctr_state {
             [combinedData appendData:bodyData];
             packetData = combinedData;
             _packetHead = nil;
+        } else {
+            packetData = TTAes256Decrypt(rawData, TTGetTcpKey());
         }
         
 //        if (packetData.length % 4 != 0) {
@@ -1121,6 +1131,7 @@ struct ctr_state {
 //        }
         [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
     }
+    /*
     else if (tag == MTTcpReadTagQuickAck)
     {
 #ifdef DEBUG
@@ -1143,6 +1154,7 @@ struct ctr_state {
             [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
         }
     }
+     */
 }
              
 - (void)socket:(GCDAsyncSocket *)__unused socket didConnectToHost:(NSString *)__unused host port:(uint16_t)__unused port

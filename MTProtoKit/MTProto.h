@@ -71,5 +71,6 @@
 typedef NSString *(^TTProtoDecoder)(NSData *);
 + (void)registerProtoDecoder:(TTProtoDecoder)decoder withName:(NSString *)name;
 + (TTProtoDecoder)protoDecoderForName:(NSString *)name;
+- (void)connectionMayHaveProblem;
 
 @end

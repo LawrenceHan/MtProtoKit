@@ -2018,104 +2018,131 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         
         _transport.simultaneousTransactionsEnabled = true;
         
-        if (data.length <= 4 + 15) {
-            int32_t protocolErrorCode = 0;
-            [data getBytes:&protocolErrorCode range:NSMakeRange(0, 4)];
-            
-            if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p protocol error %" PRId32 "", self, protocolErrorCode);
-            }
-            
-            if (decodeResult != nil)
-                decodeResult(transactionId, false);
-            
-            id currentTransport = _transport;
-            
-            [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
-            
-            for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
-            {
-                id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
-                
-                if ([messageService respondsToSelector:@selector(mtProto:protocolErrorReceived:)])
-                    [messageService mtProto:self protocolErrorReceived:protocolErrorCode];
-            }
-            
-            if (protocolErrorCode == -404) {
-                [self handleMissingKey:transport.address];
-            }
-            
-            if (currentTransport == _transport)
-                [self requestSecureTransportReset];
-            
-            return;
+//        if (data.length <= 4 + 15) {
+//            int32_t protocolErrorCode = 0;
+//            [data getBytes:&protocolErrorCode range:NSMakeRange(0, 4)];
+//
+//            if (MTLogEnabled()) {
+//                MTLog(@"[MTProto#%p protocol error %" PRId32 "", self, protocolErrorCode);
+//            }
+//
+//            if (decodeResult != nil)
+//                decodeResult(transactionId, false);
+//
+//            id currentTransport = _transport;
+//
+//            [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
+//
+//            for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
+//            {
+//                id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
+//
+//                if ([messageService respondsToSelector:@selector(mtProto:protocolErrorReceived:)])
+//                    [messageService mtProto:self protocolErrorReceived:protocolErrorCode];
+//            }
+//
+//            if (protocolErrorCode == -404) {
+//                [self handleMissingKey:transport.address];
+//            }
+//
+//            if (currentTransport == _transport)
+//                [self requestSecureTransportReset];
+//
+//            return;
+//        }
+#ifdef DEBUG
+        NSAssert(data.length >= 12, @"data length should be more than 11");
+#endif
+        
+//        NSData *decryptedData = nil;
+//
+//        if (_useUnauthorizedMode)
+//            decryptedData = data;
+//        else
+//            decryptedData = [self _decryptIncomingTransportData:data address:transport.address];
+//
+//        if (decryptedData != nil)
+//        {
+//            if (decodeResult != nil)
+//                decodeResult(transactionId, true);
+//
+//            int64_t dataMessageId = 0;
+//            bool parseError = false;
+//            NSArray *parsedMessages = [self _parseIncomingMessages:decryptedData dataMessageId:&dataMessageId parseError:&parseError];
+//            for (MTIncomingMessage *message in parsedMessages) {
+//                if ([message.body isKindOfClass:[MTRpcResultMessage class]]) {
+//                    MTRpcResultMessage *rpcResultMessage = message.body;
+//                    id maybeInternalMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
+//                    if ([maybeInternalMessage isKindOfClass:[MTRpcError class]]) {
+//                        MTRpcError *rpcError = maybeInternalMessage;
+//                        if (rpcError.errorCode == 401 && [rpcError.errorDescription isEqualToString:@"AUTH_KEY_PERM_EMPTY"]) {
+//                            if (MTLogEnabled()) {
+//                                MTLog(@"[MTProto#%p received AUTH_KEY_PERM_EMPTY]", self);
+//                            }
+//                            [self handleMissingKey:transport.address];
+//                            [self requestSecureTransportReset];
+//
+//                            return;
+//                        }
+//                    }
+//                }
+//            }
+//            if (parseError) {
+//                if (MTLogEnabled()) {
+//                    MTLog(@"[MTProto#%p incoming data parse error, header: %d:%@]", self, (int)decryptedData.length, dumpHexString(decryptedData, 128));
+//                }
+//
+//                [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
+//
+//                [self resetSessionInfo];
+//            } else {
+//                [self transportTransactionsSucceeded:@[transactionId]];
+//
+//                for (MTIncomingMessage *incomingMessage in parsedMessages)
+//                {
+//                    [self _processIncomingMessage:incomingMessage totalSize:(int)data.length withTransactionId:transactionId address:transport.address];
+//                }
+//
+//                if (requestTransactionAfterProcessing)
+//                    [self requestTransportTransaction];
+//            }
+//        }
+//        else
+//        {
+//            if (MTLogEnabled()) {
+//                MTLog(@"[MTProto#%p couldn't decrypt incoming data]", self);
+//            }
+//
+//            if (decodeResult != nil)
+//                decodeResult(transactionId, false);
+//
+//            [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
+//
+//            [self requestSecureTransportReset];
+//        }
+        
+        // New
+        if (decodeResult != nil) {
+            decodeResult(transactionId, true);
         }
         
-        NSData *decryptedData = nil;
+        [self transportTransactionsSucceeded:@[transactionId]];
         
-        if (_useUnauthorizedMode)
-            decryptedData = data;
-        else
-            decryptedData = [self _decryptIncomingTransportData:data address:transport.address];
+        uint32_t operation = 0;
+        [data getBytes:&operation range:NSMakeRange(4, 4)];
         
-        if (decryptedData != nil)
-        {
-            if (decodeResult != nil)
-                decodeResult(transactionId, true);
-            
-            int64_t dataMessageId = 0;
-            bool parseError = false;
-            NSArray *parsedMessages = [self _parseIncomingMessages:decryptedData dataMessageId:&dataMessageId parseError:&parseError];
-            for (MTIncomingMessage *message in parsedMessages) {
-                if ([message.body isKindOfClass:[MTRpcResultMessage class]]) {
-                    MTRpcResultMessage *rpcResultMessage = message.body;
-                    id maybeInternalMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
-                    if ([maybeInternalMessage isKindOfClass:[MTRpcError class]]) {
-                        MTRpcError *rpcError = maybeInternalMessage;
-                        if (rpcError.errorCode == 401 && [rpcError.errorDescription isEqualToString:@"AUTH_KEY_PERM_EMPTY"]) {
-                            if (MTLogEnabled()) {
-                                MTLog(@"[MTProto#%p received AUTH_KEY_PERM_EMPTY]", self);
-                            }
-                            [self handleMissingKey:transport.address];
-                            [self requestSecureTransportReset];
-                            
-                            return;
-                        }
-                    }
-                }
-            }
-            if (parseError) {
-                if (MTLogEnabled()) {
-                    MTLog(@"[MTProto#%p incoming data parse error, header: %d:%@]", self, (int)decryptedData.length, dumpHexString(decryptedData, 128));
-                }
-                
-                [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
-                
-                [self resetSessionInfo];
-            } else {
-                [self transportTransactionsSucceeded:@[transactionId]];
-                
-                for (MTIncomingMessage *incomingMessage in parsedMessages)
-                {
-                    [self _processIncomingMessage:incomingMessage totalSize:(int)data.length withTransactionId:transactionId address:transport.address];
-                }
-                
-                if (requestTransactionAfterProcessing)
-                    [self requestTransportTransaction];
-            }
+        MTIncomingMessage *incomingMessage = nil;
+        if (operation == 501) {
+            MTPongMessage *pong = [[MTPongMessage alloc] initWithMessageId:501 pingId:501];
+            incomingMessage = [[MTIncomingMessage alloc] initWithMessageId:0 seqNo:0 salt:0 timestamp:0 size:data.length body:pong];
+        } else {
+            incomingMessage = [[MTIncomingMessage alloc] initWithMessageId:0 seqNo:0 salt:0 timestamp:0 size:data.length body:data];
         }
-        else
-        {
-            if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p couldn't decrypt incoming data]", self);
-            }
-            
-            if (decodeResult != nil)
-                decodeResult(transactionId, false);
-            
-            [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
-            
-            [self requestSecureTransportReset];
+        
+        [self _processIncomingMessage:incomingMessage totalSize:(int)data.length withTransactionId:transactionId address:transport.address];
+        
+        if (requestTransactionAfterProcessing) {
+            [self requestTransportTransaction];
         }
     }];
 }
@@ -2381,16 +2408,17 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 
 - (void)_processIncomingMessage:(MTIncomingMessage *)incomingMessage totalSize:(int)totalSize withTransactionId:(id)transactionId address:(MTDatacenterAddress *)address
 {
+    /*
     if ([_sessionInfo messageProcessed:incomingMessage.messageId])
     {
         if (MTLogEnabled()) {
             MTLog(@"[MTProto#%p received duplicate message %" PRId64 "]", self, incomingMessage.messageId);
         }
         [_sessionInfo scheduleMessageConfirmation:incomingMessage.messageId size:incomingMessage.size];
-        
+
         if ([_sessionInfo scheduledMessageConfirmationsExceedSize:MTMaxUnacknowledgedMessageSize orCount:MTMaxUnacknowledgedMessageCount])
             [self requestTransportTransaction];
-        
+
         return;
     }
     
@@ -2630,6 +2658,16 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 
                 [self requestTransportTransaction];
             }
+        }
+    }
+     */
+    
+    // New
+    for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--) {
+        id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
+        
+        if ([messageService respondsToSelector:@selector(mtProto:receivedMessage:)]) {
+            [messageService mtProto:self receivedMessage:incomingMessage];
         }
     }
 }
@@ -2879,6 +2917,12 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
     
     return nil;
+}
+
+- (void)connectionMayHaveProblem {
+    [[MTProto managerQueue] dispatchOnQueue:^{
+        [self transportConnectionProblemsStatusChanged:_transport hasConnectionProblems:true isProbablyHttp:false];
+    }];
 }
 
 @end
