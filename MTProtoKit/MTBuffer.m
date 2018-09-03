@@ -95,8 +95,8 @@ static inline int roundUp(int numToRound, int multiple)
 - (void)appendData:(NSData *)data operation:(int32_t)operation {
     NSMutableData *packetData = [[NSMutableData alloc] initWithCapacity:data.length + 16];
     
-    UInt16 headerLength = (UInt16)16;
-    UInt32 packetLength = (UInt32)(headerLength + data.length);
+    uint16_t headerLength = (uint16_t)16;
+    uint32_t packetLength = (uint32_t)(headerLength + data.length);
     
     NSData *packetLengthData = [NSData dataWithBytes:&packetLength length:sizeof(packetLength)];
     [packetData appendData:packetLengthData];

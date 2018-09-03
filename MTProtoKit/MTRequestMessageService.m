@@ -293,6 +293,7 @@
     {
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
+        /*
         // invokeWithLayer
         [buffer appendInt32:(int32_t)0xda9b0d0d];
         [buffer appendInt32:(int32_t)[_serialization currentLayer]];
@@ -324,6 +325,11 @@
         }
         
         [buffer appendBytes:currentData.bytes length:currentData.length];
+         */
+        
+        // new
+        [buffer appendData:request.payload operation:[(NSNumber *)request.metadata intValue]];
+        
         currentData = buffer.data;
     }
     
@@ -331,9 +337,13 @@
     {
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
-        [buffer appendInt32:(int32_t)0xbf9459b7];
-
-        [buffer appendBytes:currentData.bytes length:currentData.length];
+//        [buffer appendInt32:(int32_t)0xbf9459b7];
+//
+//        [buffer appendBytes:currentData.bytes length:currentData.length];
+        
+        // new
+        [buffer appendData:request.payload operation:[(NSNumber *)request.metadata intValue]];
+        
         currentData = buffer.data;
     }
     
