@@ -493,8 +493,26 @@
             }
         } completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId)
         {
-            for (MTRequest *request in _requests)
-            {
+//            for (MTRequest *request in _requests)
+//            {
+//                id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
+//                if (messageInternalId != nil)
+//                {
+//                    request.requestContext.waitingForMessageId = false;
+//                    MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
+//                    if (preparedMessage != nil && messageInternalIdToTransactionId[messageInternalId] != nil)
+//                    {
+//                        MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:messageInternalIdToTransactionId[messageInternalId] quickAckId:(int32_t)[messageInternalIdToQuickAckId[messageInternalId] intValue]];
+//                        requestContext.willInitializeApi = requestsWillInitializeApi;
+//                        request.requestContext = requestContext;
+//                    }
+//                }
+//            }
+            
+            // new
+            for (NSInteger index = 0; index < (NSInteger)_requests.count; index++) {
+                MTRequest *request = _requests[index];
+                
                 id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
                 if (messageInternalId != nil)
                 {
@@ -505,6 +523,16 @@
                         MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:messageInternalIdToTransactionId[messageInternalId] quickAckId:(int32_t)[messageInternalIdToQuickAckId[messageInternalId] intValue]];
                         requestContext.willInitializeApi = requestsWillInitializeApi;
                         request.requestContext = requestContext;
+                    }
+                    
+                    request.requestContext = nil;
+                    
+                    void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = [request.completed copy];
+                    [_requests removeObjectAtIndex:(NSUInteger)index];
+                    index--;
+                    
+                    if (completed) {
+                        completed(nil, 0, nil);
                     }
                 }
             }
@@ -518,6 +546,15 @@
                     dropContext.messageSeqNo = preparedMessage.seqNo;
                 }
             }
+            
+            if (_requests.count == 0) {
+                id<MTRequestMessageServiceDelegate> delegate = _delegate;
+                if ([delegate respondsToSelector:@selector(requestMessageServiceDidCompleteAllRequests:)]) {
+                    [delegate requestMessageServiceDidCompleteAllRequests:self];
+                }
+            }
+            
+            [self updateRequestsTimer];
         }];
     }
     
