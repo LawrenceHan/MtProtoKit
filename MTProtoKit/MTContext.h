@@ -111,5 +111,6 @@
 
 // New
 @property (nonatomic, copy) NSString *(^decodeAuthBlock)(NSData *);
+- (void)removeAllAuthInfos;
 
 @end

@@ -1279,4 +1279,11 @@
     }];
 }
 
+- (void)removeAllAuthInfos {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+         [_datacenterAuthInfoById removeAllObjects];
+         [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];
+     }];
+}
+
 @end
