@@ -568,7 +568,10 @@ struct ctr_state {
                     } else {
 //                        NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
 //                        [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
-                        NSData *encryptedData = TTAes256Encrypt(body, TTGetTcpKey());
+                        if (!_innerTcpKey.length) {
+                            _innerTcpKey = TTGetTcpKey();
+                        }
+                        NSData *encryptedData = TTAes256Encrypt(body, _innerTcpKey);
                         uint32_t packetLength = (uint32_t)(header.length+encryptedData.length);
                         [header replaceBytesInRange:NSMakeRange(0, 4) withBytes:&packetLength];
                         [packetData appendData:header];

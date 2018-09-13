@@ -801,10 +801,11 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self _sendHeartBeat];
             
             __weak MTTcpTransport *weakSelf = self;
-            transportContext.heartBeatTimer = [[MTTimer alloc] initWithTimeout:30.0 repeat:false completion:^{
+            transportContext.heartBeatTimer = [[MTTimer alloc] initWithTimeout:30.0 repeat:true completion:^{
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 [strongSelf _sendHeartBeat];
             } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
+            [transportContext.heartBeatTimer start];
         }
     }];
 }
